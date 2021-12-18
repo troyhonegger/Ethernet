@@ -9,7 +9,7 @@
  */
 
 #include <Arduino.h>
-#include "Ethernet.h"
+#include "../Ethernet.h"
 #include "w5100.h"
 
 
