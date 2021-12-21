@@ -150,7 +150,7 @@ public:
   // ---------------
 //private:
 public:
-  static uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len);
+  static uint16_t write(uint16_t addr, const uint8_t *buf, uint16_t len, bool isProgmem = false);
   static uint8_t write(uint16_t addr, uint8_t data) {
     return write(addr, &data, 1);
   }

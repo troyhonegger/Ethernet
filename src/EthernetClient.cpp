@@ -88,6 +88,14 @@ size_t EthernetClient::write(const uint8_t *buf, size_t size)
 	return 0;
 }
 
+size_t EthernetClient::write_P(const uint8_t *buf, size_t size)
+{
+	if (_sockindex >= MAX_SOCK_NUM) return 0;
+	if (Ethernet.socketSend(_sockindex, buf, size, true)) return size;
+	setWriteError();
+	return 0;
+}
+
 int EthernetClient::available()
 {
 	if (_sockindex >= MAX_SOCK_NUM) return 0;

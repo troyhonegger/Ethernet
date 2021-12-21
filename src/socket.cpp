@@ -43,7 +43,7 @@ static socketstate_t state[MAX_SOCK_NUM];
 
 static uint16_t getSnTX_FSR(uint8_t s);
 static uint16_t getSnRX_RSR(uint8_t s);
-static void write_data(uint8_t s, uint16_t offset, const uint8_t *data, uint16_t len);
+static void write_data(uint8_t s, uint16_t offset, const uint8_t *data, uint16_t len, bool isProgmem = false);
 static void read_data(uint8_t s, uint16_t src, uint8_t *dst, uint16_t len);
 
 
@@ -395,7 +395,7 @@ static uint16_t getSnTX_FSR(uint8_t s)
 }
 
 
-static void write_data(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len)
+static void write_data(uint8_t s, uint16_t data_offset, const uint8_t *data, uint16_t len, bool isProgmem)
 {
 	uint16_t ptr = W5100.readSnTX_WR(s);
 	ptr += data_offset;
@@ -403,12 +403,12 @@ static void write_data(uint8_t s, uint16_t data_offset, const uint8_t *data, uin
 	uint16_t dstAddr = offset + W5100.SBASE(s);
 
 	if (W5100.hasOffsetAddressMapping() || offset + len <= W5100.SSIZE) {
-		W5100.write(dstAddr, data, len);
+		W5100.write(dstAddr, data, len, isProgmem);
 	} else {
 		// Wrap around circular buffer
 		uint16_t size = W5100.SSIZE - offset;
-		W5100.write(dstAddr, data, size);
-		W5100.write(W5100.SBASE(s), data + size, len - size);
+		W5100.write(dstAddr, data, size, isProgmem);
+		W5100.write(W5100.SBASE(s), data + size, len - size, isProgmem);
 	}
 	ptr += len;
 	W5100.writeSnTX_WR(s, ptr);
@@ -419,7 +419,7 @@ static void write_data(uint8_t s, uint16_t data_offset, const uint8_t *data, uin
  * @brief	This function used to send the data in TCP mode
  * @return	1 for success else 0.
  */
-uint16_t EthernetClass::socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
+uint16_t EthernetClass::socketSend(uint8_t s, const uint8_t * buf, uint16_t len, bool isProgmem)
 {
 	uint8_t status=0;
 	uint16_t ret=0;
@@ -446,7 +446,7 @@ uint16_t EthernetClass::socketSend(uint8_t s, const uint8_t * buf, uint16_t len)
 
 	// copy data
 	SPI.beginTransaction(SPI_ETHERNET_SETTINGS);
-	write_data(s, 0, (uint8_t *)buf, ret);
+	write_data(s, 0, (uint8_t *)buf, ret, isProgmem);
 	W5100.execCmdSn(s, Sock_SEND);
 
 	/* +2008.01 bj */

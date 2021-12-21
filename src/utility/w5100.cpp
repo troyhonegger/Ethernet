@@ -292,7 +292,7 @@ W5100Linkstatus W5100Class::getLinkStatus()
 	}
 }
 
-uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
+uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len, bool isProgmem)
 {
 	uint8_t cmd[8];
 
@@ -303,7 +303,7 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 			SPI.transfer(addr >> 8);
 			SPI.transfer(addr & 0xFF);
 			addr++;
-			SPI.transfer(buf[i]);
+			SPI.transfer(isProgmem ? pgm_read_byte_near(buf + i) : buf[i]);
 			resetSS();
 		}
 	} else if (chip == 52) {
@@ -313,14 +313,21 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 		cmd[2] = ((len >> 8) & 0x7F) | 0x80;
 		cmd[3] = len & 0xFF;
 		SPI.transfer(cmd, 4);
-#ifdef SPI_HAS_TRANSFER_BUF
-		SPI.transfer(buf, NULL, len);
-#else
-		// TODO: copy 8 bytes at a time to cmd[] and block transfer
-		for (uint16_t i=0; i < len; i++) {
-			SPI.transfer(buf[i]);
+		if (isProgmem) {
+			for (uint16_t i=0; i < len; i++) {
+				SPI.transfer(pgm_read_byte_near(buf + i));
+			}
 		}
+		else {
+#ifdef SPI_HAS_TRANSFER_BUF
+			SPI.transfer(buf, NULL, len);
+#else
+			// TODO: copy 8 bytes at a time to cmd[] and block transfer
+			for (uint16_t i=0; i < len; i++) {
+				SPI.transfer(buf[i]);
+			}
 #endif
+		}
 		resetSS();
 	} else { // chip == 55
 		setSS();
@@ -364,19 +371,25 @@ uint16_t W5100Class::write(uint16_t addr, const uint8_t *buf, uint16_t len)
 		}
 		if (len <= 5) {
 			for (uint8_t i=0; i < len; i++) {
-				cmd[i + 3] = buf[i];
+				cmd[i + 3] = isProgmem ? pgm_read_byte_near(buf + i) : buf[i];
 			}
 			SPI.transfer(cmd, len + 3);
 		} else {
 			SPI.transfer(cmd, 3);
+			if (isProgmem) {
+				for (uint16_t i=0; i < len; i++) {
+					SPI.transfer(pgm_read_byte_near(buf + i));
+				}
+			} else {
 #ifdef SPI_HAS_TRANSFER_BUF
-			SPI.transfer(buf, NULL, len);
+				SPI.transfer(buf, NULL, len);
 #else
-			// TODO: copy 8 bytes at a time to cmd[] and block transfer
-			for (uint16_t i=0; i < len; i++) {
-				SPI.transfer(buf[i]);
-			}
+				// TODO: copy 8 bytes at a time to cmd[] and block transfer
+				for (uint16_t i=0; i < len; i++) {
+					SPI.transfer(buf[i]);
+				}
 #endif
+			}
 		}
 		resetSS();
 	}
